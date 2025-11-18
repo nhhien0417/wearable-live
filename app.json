@@ -1,4 +1,4 @@
-{
+﻿{
   "expo": {
     "name": "WearableLiveDemoMobile",
     "slug": "wearable-live-demo-fe-mobile",
@@ -11,10 +11,18 @@
       "resizeMode": "contain",
       "backgroundColor": "#0b1224"
     },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "networkSecurityConfig": "assets/network_security_config.xml"
+          }
+        }
+      ]
+    ],
     "android": {
-      "permissions": [
-        "ACTIVITY_RECOGNITION"
-      ],
+      "permissions": ["ACTIVITY_RECOGNITION"],
       "package": "com.nhhien.wearablelivedemofemobile"
     },
     "ios": {

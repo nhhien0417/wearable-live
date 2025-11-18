@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wearable Live Walk Demo</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
+        background: #0b1224;
+        color: #e2e8f0;
+      }
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+      }
+      h1 {
+        margin: 0 0 12px 0;
+        font-size: 32px;
+        font-weight: 800;
+      }
+      .card {
+        background: #0f172a;
+        border: 1px solid #1f2937;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+      }
+      .stat {
+        padding: 12px;
+        border-radius: 10px;
+        background: #111827;
+        border: 1px solid #1f2937;
+      }
+      .label {
+        color: #94a3b8;
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+      .value {
+        font-size: 28px;
+        font-weight: 800;
+      }
+      .connection {
+        font-weight: 700;
+      }
+      .log {
+        max-height: 240px;
+        overflow-y: auto;
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 13px;
+        background: #0b1224;
+        border-radius: 6px;
+        padding: 10px;
+        border: 1px solid #1f2937;
+      }
+      .chip {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-weight: 700;
+        margin-top: 4px;
+      }
+      .chip.live {
+        background: rgba(34, 197, 94, 0.15);
+        color: #22c55e;
+      }
+      .chip.stopped {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+      }
+      .progress {
+        height: 8px;
+        background: #1f2937;
+        border-radius: 999px;
+        overflow: hidden;
+        margin-top: 12px;
+      }
+      .progress > div {
+        height: 100%;
+        background: linear-gradient(90deg, #22c55e, #38bdf8);
+        width: 0%;
+        transition: width 0.3s ease;
+      }
+      .small {
+        font-size: 13px;
+        color: #94a3b8;
+      }
+      .ws-url {
+        color: #38bdf8;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Wearable Live Walk Demo</h1>
+      <p class="small">
+        Kết nối WebSocket:
+        <span class="ws-url" id="ws-url"></span>
+        <span id="status" class="connection"></span>
+      </p>
+
+      <div class="card">
+        <div class="grid">
+          <div class="stat">
+            <div class="label">Steps</div>
+            <div class="value" id="steps">--</div>
+          </div>
+          <div class="stat">
+            <div class="label">Duration</div>
+            <div class="value" id="duration">--:--:--</div>
+          </div>
+          <div class="stat">
+            <div class="label">Avg Intensity</div>
+            <div class="value" id="intensity">--</div>
+          </div>
+          <div class="stat">
+            <div class="label">Session</div>
+            <div class="value" id="session-id">--</div>
+          </div>
+        </div>
+        <div class="chip stopped" id="state-chip">Đang chờ dữ liệu</div>
+        <div class="progress">
+          <div id="progress-bar"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Lịch sử realtime</h3>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+
+    <script>
+      const WS_URL = "wss://8376c4e418bb.ngrok-free.app";
+
+      document.getElementById("ws-url").textContent = WS_URL;
+
+      let socket;
+      let history = [];
+      const statusEl = document.getElementById("status");
+      const stepsEl = document.getElementById("steps");
+      const durationEl = document.getElementById("duration");
+      const intensityEl = document.getElementById("intensity");
+      const sessionEl = document.getElementById("session-id");
+      const logEl = document.getElementById("log");
+      const chipEl = document.getElementById("state-chip");
+      const progressBar = document.getElementById("progress-bar");
+
+      function formatDuration(totalSeconds) {
+        const hrs = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+        const mins = String(Math.floor((totalSeconds % 3600) / 60)).padStart(
+          2,
+          "0"
+        );
+        const secs = String(Math.floor(totalSeconds % 60)).padStart(2, "0");
+        return `${hrs}:${mins}:${secs}`;
+      }
+
+      function setStatus(text, color) {
+        statusEl.textContent = ` (${text})`;
+        statusEl.style.color = color;
+      }
+
+      function addLog(line) {
+        const ts = new Date().toLocaleTimeString();
+        history.unshift(`[${ts}] ${line}`);
+        history = history.slice(0, 30);
+        logEl.innerHTML = history.join("<br>");
+      }
+
+      function updateUI(data) {
+        stepsEl.textContent = data.steps ?? "--";
+        durationEl.textContent = formatDuration(data.durationSeconds || 0);
+        intensityEl.textContent =
+          data.avgIntensity !== null && data.avgIntensity !== undefined
+            ? (Math.round(data.avgIntensity * 100) / 100).toFixed(2)
+            : "--";
+        sessionEl.textContent = data.sessionId || "--";
+        chipEl.textContent = data.finished ? "Đã dừng" : "Đang đi bộ";
+        chipEl.className = `chip ${data.finished ? "stopped" : "live"}`;
+
+        const pct = Math.min(100, (data.steps % 1000) / 10);
+        progressBar.style.width = `${pct}%`;
+      }
+
+      function connect() {
+        setStatus("Connecting...", "#fbbf24");
+        socket = new WebSocket(WS_URL);
+
+        socket.onopen = () => {
+          setStatus("Connected", "#22c55e");
+          addLog("WebSocket connected");
+        };
+
+        socket.onclose = () => {
+          setStatus("Disconnected. Reconnecting...", "#ef4444");
+          addLog("Socket closed. Reconnecting...");
+          setTimeout(connect, 1200);
+        };
+
+        socket.onerror = () => {
+          setStatus("Error. Reconnecting...", "#ef4444");
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (!data.sessionId) return;
+            updateUI(data);
+            addLog(
+              `steps=${data.steps} duration=${data.durationSeconds}s finished=${data.finished}`
+            );
+          } catch (err) {
+            addLog("Invalid payload received");
+          }
+        };
+      }
+
+      connect();
+    </script>
+  </body>
+</html>
