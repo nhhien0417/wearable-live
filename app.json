@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "WearableLiveDemoMobile",
+    "slug": "wearable-live-demo-fe-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0b1224"
+    },
+    "android": {
+      "permissions": [
+        "ACTIVITY_RECOGNITION"
+      ],
+      "package": "com.nhhien.wearablelivedemofemobile"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMotionUsageDescription": "Cho phép ứng dụng đo bước chân trong phiên đi bộ."
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5d275273-c6b1-4109-8b59-04f5194d3bed"
+      }
+    }
+  }
+}
