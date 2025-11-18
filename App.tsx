@@ -1,4 +1,4 @@
-﻿import React, { useMemo } from "react";
+import React, { useMemo } from "react";
 import { StatusBar } from "expo-status-bar";
 import {
   ScrollView,
@@ -7,42 +7,41 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { WS_URL } from "./src/config";
-import { useWebSocket } from "./src/hooks/useWebSocket";
 import { useWearableSession } from "./src/hooks/useWearableSession";
 
 export default function App() {
-  const { connection, sendJson } = useWebSocket(WS_URL);
-  const { state, startSession, stopSession } = useWearableSession(sendJson);
+  const { state, startSession, stopSession } = useWearableSession();
 
-  const connectionColor = useMemo(() => {
-    if (connection === "connected") return "#22c55e";
-    if (connection === "connecting") return "#fbbf24";
-    return "#ef4444";
-  }, [connection]);
+  const sensorStatusColor = useMemo(() => {
+    if (state.pedometerAvailable === true) return "#22c55e";
+    if (state.pedometerAvailable === false) return "#f97316";
+    return "#fbbf24";
+  }, [state.pedometerAvailable]);
 
-  const sessionStatus = state.isRunning ? "Đang đi bộ" : "Đã dừng";
+  const sensorStatusText = useMemo(() => {
+    if (state.pedometerAvailable === true) return "Pedometer OK (local mode)";
+    if (state.pedometerAvailable === false)
+      return "Pedometer not available (accelerometer only)";
+    return "Checking sensors...";
+  }, [state.pedometerAvailable]);
+
+  const sessionStatus = state.isRunning ? "Walking" : "Stopped";
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.header}>
         <Text style={styles.title}>Wearable Walk Tracker</Text>
-        <Text style={[styles.connection, { color: connectionColor }]}>
-          {connection === "connected"
-            ? "Connected"
-            : connection === "connecting"
-            ? "Connecting..."
-            : "Disconnected"}
+        <Text style={[styles.connection, { color: sensorStatusColor }]}>
+          {sensorStatusText}
         </Text>
-        <Text style={styles.ipHint}>WS_URL: {WS_URL}</Text>
       </View>
 
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.label}>Session</Text>
           <Text style={styles.value}>
-            {state.sessionId ? state.sessionId : "Chưa bắt đầu"}
+            {state.sessionId ? state.sessionId : "Not started"}
           </Text>
         </View>
         <View style={styles.row}>
@@ -62,7 +61,7 @@ export default function App() {
           </Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.label}>Trạng thái</Text>
+          <Text style={styles.label}>Status</Text>
           <Text style={styles.value}>{sessionStatus}</Text>
         </View>
       </View>
@@ -97,12 +96,12 @@ export default function App() {
             {state.statusMessage || "Ready to start walking session."}
           </Text>
           <Text style={styles.logText}>
-            Pedometer: {" "}
+            Pedometer:{" "}
             {state.pedometerAvailable === null
               ? "Checking..."
               : state.pedometerAvailable
               ? "Available"
-              : "Not available"}
+              : "Not available (using accelerometer only)"}
           </Text>
           <Text style={styles.logText}>
             Last update: {new Date().toLocaleTimeString()}
