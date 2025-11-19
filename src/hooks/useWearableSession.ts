@@ -2,6 +2,13 @@
 import { Accelerometer, Pedometer } from "expo-sensors";
 import { SessionState } from "../types";
 
+/*
+  Simulates a wearable fitness tracker,
+  using phone sensors (Pedometer + Accelerometer) to measure steps,
+  walking duration and movement intensity in real time.
+  Built with React Native + Expo using `expo-sensors`.
+*/
+
 const STEP_THRESHOLD = 0.35;
 const HYSTERESIS_FACTOR = 0.5;
 const MIN_STEP_INTERVAL_MS = 350;
@@ -65,6 +72,7 @@ export function useWearableSession() {
     };
   }, []);
 
+  // Request permission, check pedometer, reset data and attach sensors
   const startSession = async () => {
     if (state.isRunning) return;
 
@@ -86,7 +94,8 @@ export function useWearableSession() {
     if (!available) {
       setState((s) => ({
         ...s,
-        statusMessage: "Pedometer not available (use physical device).",
+        statusMessage:
+          "Pedometer not available (using accelerometer fallback).",
       }));
     }
 
@@ -121,6 +130,7 @@ export function useWearableSession() {
       });
     }
 
+    // Live movement tracking: calculates intensity and fallback step detection
     Accelerometer.setUpdateInterval(50);
     accelSub.current = Accelerometer.addListener((data) => {
       const magRaw = Math.sqrt(
@@ -184,6 +194,7 @@ export function useWearableSession() {
     }, 200);
   };
 
+  // Stop tracking: remove listeners and timers
   const stopSession = () => {
     if (!state.isRunning) return;
     cleanupSession();

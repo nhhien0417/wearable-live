@@ -30,6 +30,9 @@ export default function App() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
+
+      {/* Main UI: shows steps, walking time, motion intensity
+          and session status in real time. */}
       <View style={styles.header}>
         <Text style={styles.title}>Wearable Walk Tracker</Text>
         <Text style={[styles.connection, { color: sensorStatusColor }]}>
@@ -66,6 +69,7 @@ export default function App() {
         </View>
       </View>
 
+      {/* Control: Buttons to start and stop a session. */}
       <View style={styles.buttons}>
         <TouchableOpacity
           style={[
