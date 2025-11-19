@@ -19,7 +19,7 @@ export default function App() {
   }, [state.pedometerAvailable]);
 
   const sensorStatusText = useMemo(() => {
-    if (state.pedometerAvailable === true) return "Pedometer OK (local mode)";
+    if (state.pedometerAvailable === true) return "Pedometer OK";
     if (state.pedometerAvailable === false)
       return "Pedometer not available (accelerometer only)";
     return "Checking sensors...";

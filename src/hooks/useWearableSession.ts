@@ -2,9 +2,9 @@
 import { Accelerometer, Pedometer } from "expo-sensors";
 import { SessionState } from "../types";
 
-const STEP_THRESHOLD = 1.25;
+const STEP_THRESHOLD = 0.35;
 const HYSTERESIS_FACTOR = 0.5;
-const MIN_STEP_INTERVAL_MS = 500;
+const MIN_STEP_INTERVAL_MS = 350;
 
 export function useWearableSession() {
   const [state, setState] = useState<SessionState>({
@@ -20,6 +20,9 @@ export function useWearableSession() {
   const accelSub = useRef<ReturnType<typeof Accelerometer.addListener> | null>(
     null
   );
+  const pedometerSub = useRef<ReturnType<
+    typeof Pedometer.watchStepCount
+  > | null>(null);
   const tickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const sessionStartRef = useRef<number | null>(null);
@@ -36,6 +39,10 @@ export function useWearableSession() {
     if (accelSub.current) {
       accelSub.current.remove();
       accelSub.current = null;
+    }
+    if (pedometerSub.current) {
+      pedometerSub.current.remove();
+      pedometerSub.current = null;
     }
     if (tickTimer.current) {
       clearInterval(tickTimer.current);
@@ -104,12 +111,23 @@ export function useWearableSession() {
       statusMessage: "Session started",
     }));
 
+    if (available) {
+      pedometerSub.current = Pedometer.watchStepCount(({ steps }) => {
+        stepsRef.current = steps;
+        setState((s) => ({
+          ...s,
+          steps,
+        }));
+      });
+    }
+
     Accelerometer.setUpdateInterval(50);
     accelSub.current = Accelerometer.addListener((data) => {
       const magRaw = Math.sqrt(
         data.x * data.x + data.y * data.y + data.z * data.z
       );
-      const mag = Math.abs(magRaw - 9.81);
+      const gravityBaseline = magRaw > 3 ? 9.81 : 1;
+      const mag = Math.abs(magRaw - gravityBaseline);
 
       intensitySumRef.current += mag;
       intensitySamplesRef.current += 1;
@@ -125,6 +143,10 @@ export function useWearableSession() {
         ...s,
         avgIntensity: avg,
       }));
+
+      if (available) {
+        return;
+      }
 
       const now = Date.now();
       if (!overThresholdRef.current && mag > STEP_THRESHOLD) {
